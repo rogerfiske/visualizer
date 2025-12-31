@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\Minis\\\\Documents\\\\Sprintbit Software Databases\\\\Visual Lottery Analyser\\\\Help\\\\''\")",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Minis\\\\CascadeProjects\\\\visualizer\\\\create_index.ps1\")",
+      "Bash(del \"C:\\\\Users\\\\Minis\\\\CascadeProjects\\\\visualizer\\\\create_index.ps1\")",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

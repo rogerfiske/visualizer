@@ -1,0 +1,21 @@
+{
+  "project": {
+    "name": "VLA Visualizer",
+    "description": "Backtesting framework for Visual Lottery Analyser predictions",
+    "type": "python",
+    "language": "python"
+  },
+  "context": {
+    "games": ["CA Fantasy 5", "CA Daily 4"],
+    "external_data": {
+      "fantasy5": "C:\\Users\\Minis\\CascadeProjects\\c5_scrapper\\data\\raw\\CA5_raw_data.txt",
+      "daily4": "C:\\Users\\Minis\\CascadeProjects\\CA-4_scrapper\\data\\raw\\CA_Daily_4_dat.csv"
+    },
+    "vla_software": "C:\\Program Files\\Sprintbit Software\\Visual Lottery Analyser\\VisualLotteryAnalyser.exe"
+  },
+  "preferences": {
+    "prediction_dir": "predictions",
+    "file_naming": "{game}_{date}.csv",
+    "date_format": "YYYY-MM-DD"
+  }
+}

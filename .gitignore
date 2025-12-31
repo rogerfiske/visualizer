@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+results.json
+
+# VLA docs - exclude HTML files (too many), keep INDEX
+docs/*.htm
+docs/*.html
+docs/*.png
+docs/*.jpg
+docs/*.css
+docs/*.js
+docs/*.chm
+!docs/INDEX.md
+
+# Keep predictions directory but ignore actual prediction files
+# (user should decide what to commit)
+# predictions/*.csv
+# predictions/*.txt
