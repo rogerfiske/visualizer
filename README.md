@@ -9,7 +9,8 @@ A comprehensive lottery analysis framework that started as a backtesting tool fo
 | **Phase 1**: VLA Documentation | ✅ Complete | Audit and index VLA help files |
 | **Phase 2**: Backtesting Framework | ✅ Complete | Score VLA predictions against results |
 | **Phase 3**: Exploratory Data Analysis | ✅ Complete | Analyze 33 years of historical data |
-| **Phase 4**: Custom Prediction System | 🔄 In Progress | Build bias-corrected predictor |
+| **Phase 4**: Custom Prediction System | ✅ Complete | Bias-corrected predictor with CLI |
+| **Phase 5**: Filter System | ✅ Complete | 52 filters implemented (tuning needed) |
 
 ## Key Discoveries
 
@@ -30,11 +31,21 @@ VLA's contact-based methodology has inherent positional bias:
 - **Corner numbers** (1, 6, 36, 37, 39): Systematically underweighted
 - **Impact**: Conflicts with optimal N_1 and N_5 predictions
 
+### 3. Filter System Performance
+52 statistical filters implemented but currently **reduce** performance:
+
+| Configuration | Avg Best Match | Hit Rate (3+) |
+|---------------|----------------|---------------|
+| **No filters** | 2.25 | **30.8%** |
+| With filters | 2.05 | 24.2% |
+
+Filters need tuning - currently too aggressive.
+
 ## Supported Games
 
 | Game | Format | Data Source | Historical Data |
 |------|--------|-------------|-----------------|
-| **CA Fantasy 5** | 5 numbers from 1-39 | `CA5_date.csv` | 11,664 draws (1992-2025) |
+| **CA Fantasy 5** | 5 numbers from 1-39 | `CA5_date.csv` | 11,663 draws (1992-2026) |
 | **CA Daily 4** | 4 digits (0-9 each) | `CA_Daily_4_dat.csv` | TBD |
 
 ## Project Structure
@@ -43,33 +54,41 @@ VLA's contact-based methodology has inherent positional bias:
 visualizer/
 ├── README.md                      # This file
 ├── CLAUDE.md                      # Claude Code context
-├── VLA_ANALYSIS_SUMMARY.md        # VLA methodology reference
+├── predict.py                     # Main CLI for predictions
+├── validate_system.py             # System validation (12 tests)
+├── visualize_matrix.py            # Matrix visualization tool
+│
+├── src/
+│   ├── matrix/                    # Contact matrix implementations
+│   │   ├── base.py                # ContactMatrix interface
+│   │   ├── numerical_proximity.py # Unbiased k=3 window (recommended)
+│   │   ├── weighted_adjacency.py  # VLA with bias correction
+│   │   └── csv_matrix.py          # Generic CSV matrix loader
+│   │
+│   └── predictor/                 # Prediction pipeline
+│       ├── predictor.py           # CA5Predictor main class
+│       ├── filters.py             # 52 filter functions
+│       ├── position_filter.py     # 85% capture ranges
+│       ├── ticket_generator.py    # Generation strategies
+│       └── data_loader.py         # DrawHistory class
 │
 ├── Analysis Scripts/
 │   ├── eda_ca5.py                 # Basic EDA statistics
-│   ├── eda_charts.py              # Distribution visualizations
 │   ├── eda_optimal_range.py       # Optimal capture range analysis
-│   └── analysis_contact_bias.py   # VLA matrix bias quantification
-│
-├── Backtesting Scripts/
-│   ├── backtest.py                # Single-day prediction scorer
-│   └── batch_backtest.py          # Multi-day walk-forward analysis
+│   └── analysis_bias_comparison.py # Matrix bias comparison
 │
 ├── data/
 │   ├── raw/                       # Historical lottery data
-│   │   ├── CA5_date.csv           # 11,664 Fantasy 5 draws
-│   │   └── CA5_raw_data.txt       # Alternative format
-│   ├── num_matrix/                # Matrix layouts
-│   │   └── vis_std_v1.csv         # VLA standard 6x7 matrix
-│   ├── charts/                    # Generated visualizations (50 PNGs)
-│   ├── CA5_EDA_Results.md         # EDA statistics
-│   ├── CA5_Optimal_Range_Analysis.md  # Optimal ranges with trade-offs
-│   └── VLA_Contact_Bias_Analysis.md   # Bias analysis
+│   │   └── CA5_date.csv           # 11,663 Fantasy 5 draws (1992-2026)
+│   ├── num_matrix/                # Matrix layouts and neighbor CSVs
+│   └── charts/                    # Generated visualizations (50 PNGs)
 │
 ├── docs/                          # VLA help documentation
-│   └── INDEX.md                   # Categorized index of 273 files
+│   ├── INDEX.md                   # Categorized index of 273 files
+│   └── FILTER_STRATEGY.md         # Filter thresholds and rationale
 │
-├── predictions/                   # VLA prediction exports
+├── imported_docs/                 # VLA reference documentation
+│   └── FILTERING.txt              # 52 filter definitions
 │
 └── Session Documentation/
     ├── Session_Summary_*.md       # Session recaps
@@ -78,25 +97,45 @@ visualizer/
 
 ## Quick Start
 
-### Run EDA Analysis
+### Generate Predictions
 ```bash
-# Basic statistics
-python eda_ca5.py
+# Generate 50 predictions for tomorrow
+python predict.py --tickets 50
 
-# Optimal range analysis with charts
-python eda_optimal_range.py
-
-# VLA bias analysis
-python analysis_contact_bias.py
+# Generate for specific date
+python predict.py --date 2026-01-03 --tickets 50
 ```
 
 ### Run Backtests
 ```bash
-# Single day
-python backtest.py --game fantasy5 --predictions predictions/fantasy5_2025-11-01.csv --date 2025-11-01
+# Backtest specific date
+python predict.py --backtest --date 2025-12-30
 
-# Batch (multiple days)
-python batch_backtest.py --game fantasy5 --predictions-dir ./predictions --start-date 2025-11-01 --end-date 2025-11-30
+# Backtest date range
+python predict.py --backtest --start 2025-01-01 --end 2025-12-31 --tickets 50
+```
+
+### Python API
+```python
+from src.predictor import CA5Predictor
+
+# Create predictor (best configuration)
+predictor = CA5Predictor(
+    matrix_type='proximity',
+    capture_level='85',
+    use_filters=False  # Filters currently reduce performance
+)
+
+# Generate predictions
+result = predictor.predict(num_tickets=50)
+for ticket in result['tickets'][:10]:
+    print(ticket)
+```
+
+### Validate System
+```bash
+python validate_system.py        # Quick (100 days)
+python validate_system.py --full # Full (500 days)
 ```
 
 ## How VLA Works
@@ -144,13 +183,13 @@ R6:  6    12    18    24    30    36    --
 ## Roadmap
 
 ### Next Steps
-1. **Alternative Matrix Design**: Layouts that reduce positional bias
-2. **Historical Bias Impact**: Quantify accuracy loss from VLA bias
-3. **Custom Prediction System**: Automated, optimized predictor
+1. **Filter Tuning**: Test individual filters to find which improve performance
+2. **Daily 4 Support**: Extend system to Daily 4 game
+3. **Automated Daily Predictions**: Scheduled prediction generation
 
 ### Future Vision
 ```
-Data → Bias-Corrected Matrix → Position Filters → Optimized Predictions → Backtesting → Parameter Tuning
+Data → Bias-Corrected Matrix → Position Filters → [Tuned Filters] → Predictions → Tracking
 ```
 
 ## Requirements
@@ -163,9 +202,9 @@ Data → Bias-Corrected Matrix → Position Filters → Optimized Predictions �
 
 | Data | Location | Updated Through |
 |------|----------|-----------------|
-| Fantasy 5 (project) | `data/raw/CA5_date.csv` | 12/31/2025 |
-| Fantasy 5 (external) | `C:\Users\Minis\CascadeProjects\c5_scrapper\data\raw\` | 12/30/2025 |
-| Daily 4 (external) | `C:\Users\Minis\CascadeProjects\CA-4_scrapper\data\raw\` | 12/30/2025 |
+| Fantasy 5 (project) | `data/raw/CA5_date.csv` | 1/1/2026 |
+| Fantasy 5 (external) | `C:\Users\Minis\CascadeProjects\c5_scrapper\data\raw\` | 1/1/2026 |
+| Daily 4 (external) | `C:\Users\Minis\CascadeProjects\CA-4_scrapper\data\raw\` | TBD |
 
 ## VLA Software
 
@@ -184,4 +223,4 @@ This project is for educational and research purposes only. Lottery games are ga
 
 ---
 
-*Last updated: January 1, 2026*
+*Last updated: January 2, 2026*

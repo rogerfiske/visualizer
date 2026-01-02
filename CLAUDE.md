@@ -6,12 +6,14 @@ Custom lottery prediction system with bias-corrected contact analysis and EDA-de
 ## Status (as of 2026-01-02)
 - ✅ VLA documentation audited (273 English help files indexed)
 - ✅ Backtest scripts created (`backtest.py`, `batch_backtest.py`)
-- ✅ **EDA Complete**: 11,664 draws analyzed (1992-2025)
+- ✅ **EDA Complete**: 11,663 draws analyzed (1992-2026)
 - ✅ **Optimal Ranges Identified**: 85% capture recommended
 - ✅ **VLA Bias Quantified**: 2.5x interior bias confirmed
 - ✅ **Bias-Corrected Matrices**: 3 implementations (variance 5.0 → 0.0)
 - ✅ **Custom Prediction System**: Full MVP with CLI
 - ✅ **Validation Framework**: 12/12 tests passing
+- ✅ **Filter System**: 52 filters implemented (but currently reduce performance)
+- ⚠️ **Filter Tuning Needed**: Unfiltered performs better (35% vs 24% hit rate)
 
 ## Target Games
 | Game | Format | Pool |
@@ -49,9 +51,11 @@ python analysis_bias_comparison.py
 ### Predictor Components (`src/predictor/`)
 | Component | Purpose |
 |-----------|---------|
-| `DrawHistory` | Loads 11,664 draws (1992-2025) |
+| `DrawHistory` | Loads 11,663 draws (1992-2026) |
 | `PositionFilter` | 80/85/90% capture ranges |
 | `TicketGenerator` | 4 strategies available |
+| `TicketFilter` | 52 statistical filters |
+| `FilterConfig` | Adjustable filter thresholds |
 | `CA5Predictor` | Main predictor + backtest |
 
 ### Generation Strategies
@@ -61,6 +65,31 @@ python analysis_bias_comparison.py
 | `contact_first` | Prioritize high contact scores |
 | `position_first` | Strict position compliance |
 | `random` | Random within position constraints |
+
+### Filter System (52 Filters)
+```python
+from src.predictor import CA5Predictor, FilterConfig
+
+# Currently recommended: filters OFF
+predictor = CA5Predictor(use_filters=False)  # 35% hit rate
+
+# With filters (needs tuning)
+predictor = CA5Predictor(use_filters=True)   # 24% hit rate
+```
+
+**Filter Categories:**
+- Composition: odd/even, high/low, prime/composite counts
+- Sum: total sum, unit sum, root sum, average
+- Consecutive: max consecutive, consecutive groups
+- Distance: min distance, span (first-last)
+- Decades: different decades represented
+- AC Value: Arithmetic Complexity (4-6 optimal)
+
+**Backtest Results (2025, 50 tickets/day):**
+| Config | Avg Best | Hit Rate |
+|--------|----------|----------|
+| No filters | 2.25 | **30.8%** |
+| With filters | 2.05 | 24.2% |
 
 ## Key Findings
 
@@ -125,7 +154,7 @@ Num. Proximity:   variance = 0.0  (inherently uniform)
 Fantasy 5: C:\Users\Minis\CascadeProjects\c5_scrapper\data\raw\CA5_raw_data.txt
 Daily 4:   C:\Users\Minis\CascadeProjects\CA-4_scrapper\data\raw\CA_Daily_4_dat.csv
 ```
-Data current through: **12/31/2025**
+Data current through: **1/1/2026**
 
 ## VLA Software (Legacy Reference)
 ```
@@ -176,5 +205,18 @@ Total:            12/12 PASS
 | Date | Summary |
 |------|---------|
 | 2025-12-31 | Initial setup, VLA docs audit, backtest framework |
-| 2026-01-01 | EDA complete, optimal ranges, VLA bias quantified |
-| 2026-01-02 | **Custom prediction system MVP**, bias-corrected matrices, validation framework, 12/12 tests passing |
+| 2026-01-01 | EDA complete, optimal ranges, VLA bias quantified, custom prediction MVP |
+| 2026-01-02 | **52-filter system implemented**, filter integration, backtests show unfiltered better |
+
+## Current Best Configuration
+```python
+from src.predictor import CA5Predictor
+
+# Best performing setup
+predictor = CA5Predictor(
+    matrix_type='proximity',
+    capture_level='85',
+    use_filters=False  # Filters hurt performance currently
+)
+result = predictor.predict(num_tickets=50)
+```
