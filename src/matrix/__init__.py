@@ -31,6 +31,7 @@ from .base import ContactMatrix
 from .vla_standard import VLAStandardMatrix
 from .weighted_adjacency import WeightedAdjacencyMatrix
 from .numerical_proximity import NumericalProximityMatrix
+from .csv_matrix import CSVGridMatrix, analyze_matrix
 
 
 # Factory functions for easy creation
@@ -60,5 +61,7 @@ __all__ = [
     'VLAStandardMatrix',
     'WeightedAdjacencyMatrix',
     'NumericalProximityMatrix',
+    'CSVGridMatrix',
+    'analyze_matrix',
     'create_matrix',
 ]
