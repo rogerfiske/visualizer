@@ -32,12 +32,15 @@ from .data_loader import DrawHistory
 from .position_filter import PositionFilter, OPTIMAL_RANGES_85, OPTIMAL_RANGES_90
 from .ticket_generator import TicketGenerator
 from .predictor import CA5Predictor
+from .filters import TicketFilter, FilterConfig
 
 __all__ = [
     'DrawHistory',
     'PositionFilter',
     'TicketGenerator',
     'CA5Predictor',
+    'TicketFilter',
+    'FilterConfig',
     'OPTIMAL_RANGES_85',
     'OPTIMAL_RANGES_90',
 ]

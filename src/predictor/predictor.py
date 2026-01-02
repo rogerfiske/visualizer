@@ -12,6 +12,7 @@ from ..matrix import ContactMatrix, NumericalProximityMatrix, WeightedAdjacencyM
 from .data_loader import DrawHistory
 from .position_filter import PositionFilter
 from .ticket_generator import TicketGenerator
+from .filters import TicketFilter, FilterConfig
 
 
 class CA5Predictor:
@@ -34,7 +35,9 @@ class CA5Predictor:
         matrix_type: str = 'proximity',
         capture_level: str = '85',
         lookback_draws: int = 1,
-        data_path: Optional[Path] = None
+        data_path: Optional[Path] = None,
+        filter_config: Optional[FilterConfig] = None,
+        use_filters: bool = True
     ):
         """
         Initialize the predictor.
@@ -44,11 +47,18 @@ class CA5Predictor:
             capture_level: '80', '85', or '90' for position filter stringency
             lookback_draws: Number of previous draws to use for contact analysis
             data_path: Optional custom path to CA5_date.csv
+            filter_config: Optional custom filter configuration
+            use_filters: Whether to apply statistical filters (default True)
         """
         # Initialize components
         self.history = DrawHistory(data_path)
         self.position_filter = PositionFilter(capture_level)
         self.lookback_draws = lookback_draws
+        self.use_filters = use_filters
+
+        # Initialize filter
+        self.filter_config = filter_config or FilterConfig()
+        self.ticket_filter = TicketFilter(self.filter_config)
 
         # Select matrix type
         if matrix_type == 'weighted':
@@ -68,7 +78,8 @@ class CA5Predictor:
         self,
         target_date: Optional[datetime] = None,
         num_tickets: int = 20,
-        strategy: str = 'balanced'
+        strategy: str = 'balanced',
+        pool_multiplier: int = 10
     ) -> Dict:
         """
         Generate predictions for a target date.
@@ -76,9 +87,11 @@ class CA5Predictor:
         Args:
             target_date: Date to predict for. Uses draws BEFORE this date.
                         Defaults to day after last draw in dataset.
-            num_tickets: Number of tickets to generate
+            num_tickets: Number of tickets to return
             strategy: Generation strategy ('balanced', 'contact_first',
                      'position_first', 'random')
+            pool_multiplier: Generate this many times more tickets before filtering
+                            (default 10x). Set to 1 to skip overgeneration.
 
         Returns:
             Dict containing:
@@ -86,6 +99,7 @@ class CA5Predictor:
             - previous_draw: The draw used for contact analysis
             - tickets: List of generated tickets
             - config: Configuration used
+            - filter_stats: Statistics about filtering (if filters enabled)
         """
         # Determine target date
         if target_date is None:
@@ -105,29 +119,59 @@ class CA5Predictor:
         for draw in recent_draws:
             recent_numbers.extend(draw['numbers'])
 
-        # Generate tickets
+        # Determine pool size
+        if self.use_filters:
+            pool_size = num_tickets * pool_multiplier
+        else:
+            pool_size = num_tickets
+
+        # Generate initial ticket pool
         tickets = self.generator.generate_tickets(
             recent_draws=recent_numbers,
-            num_tickets=num_tickets,
+            num_tickets=pool_size,
             strategy=strategy
         )
 
-        # Score tickets
+        filter_stats = {'enabled': self.use_filters}
+
+        # Apply filters if enabled
+        if self.use_filters:
+            # Get last draw for same_last filter
+            last_draw_numbers = recent_draws[0]['numbers'] if recent_draws else []
+
+            filter_stats['pool_size'] = len(tickets)
+            filtered = self.ticket_filter.apply(tickets, last_draw=last_draw_numbers)
+            filter_stats['after_filter'] = len(filtered)
+            filter_stats['filter_rejection_rate'] = 1 - (len(filtered) / len(tickets)) if tickets else 0
+
+            # Use filtered tickets if we have enough, otherwise fall back to unfiltered
+            if len(filtered) >= num_tickets:
+                tickets = filtered
+            else:
+                filter_stats['warning'] = f'Only {len(filtered)} passed filters, using all'
+
+        # Score all remaining tickets
         scored = self.generator.score_tickets(tickets, recent_numbers)
+
+        # Select top N by score (already sorted by combined_score)
+        top_scored = scored[:num_tickets]
+        final_tickets = [s['ticket'] for s in top_scored]
 
         return {
             'target_date': target_date,
             'target_date_str': target_date.strftime('%Y-%m-%d'),
             'previous_draws': [d['numbers'] for d in recent_draws],
             'previous_dates': [d['date_str'] for d in recent_draws],
-            'tickets': tickets,
-            'scored_tickets': scored,
+            'tickets': final_tickets,
+            'scored_tickets': top_scored,
+            'filter_stats': filter_stats,
             'config': {
                 'matrix_type': self.matrix_type,
                 'capture_level': self.capture_level,
                 'lookback_draws': self.lookback_draws,
                 'strategy': strategy,
                 'num_tickets': num_tickets,
+                'use_filters': self.use_filters,
             }
         }
 
